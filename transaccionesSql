@@ -1,0 +1,79 @@
+#tarea
+
+
+seleccione * de bd_sample.tbl_facturas;
+seleccione * de bd_sample.tbl_productos;
+seleccione * de bd_sample.tbl_subscriptores;
+seleccione * de bd_sample.tbl_items_factura;
+ 
+ 
+# Agregar un suscriptor nuevo:
+insertar en bd_sample.tbl_subscriptores(
+	codigo_subscriptor, nombres, apellidos
+) valores (
+	'202212345', 'Jon Paul', 'Doe'
+);
+
+/*
+	Transacción para crear un artículo de un producto facturado
+*/
+
+establecer @v_id_subscriptor = 29;
+establecer @v_id_factura = 49;
+establecer @v_id_producto = 2;
+establecer @v_cantidad = 2;
+establecer @v_numero_items = 2;
+establecer @v_precio_prod = 2;
+
+
+
+# 1. Crear la factura
+
+    insertar en bd_sample.tbl_facturas (
+		id_factura, fecha_emision, id_subscriptor, numero_items, isv_total, subtotal, totapagar
+    ) valores (
+		nulo, curdate(), @v_id_subscriptor, 0, 0, 0, 0
+    );
+
+     
+    seleccione id_factura en @v_id_factura
+    de bd_sample.tbl_facturas
+    donde id_subscriptor = @v_id_subscriptor
+    ordenar por id_factura desc;
+
+# 2. Agregar el producto a los artículos de factura  
+    insertar en bd_sample.tbl_items_factura(
+		id_factura, id_producto, cantidad
+    ) valores ( @v_id_factura, @v_id_producto, @v_cantidad );
+    
+# 3. Actualizar resumen de factura    
+    seleccione suma (cantidad) en @v_numero_items
+    de bd_sample.tbl_items_factura
+    donde id_factura = @v_id_factura;
+    
+    selecciona precio_venta en @v_precio_prod  
+    de bd_sample.tbl_productos
+    donde id_producto = @v_id_producto;
+
+	actualizar bd_sample.tbl_facturas
+		establecer numero_items = @v_numero_items,
+			isv_total = (@v_precio_prod * @v_numero_items)*0.18,
+            subtotal = @v_precio_prod * @v_numero_items,
+            totapagar = (@v_precio_prod * @v_numero_items)*1.18
+		 donde id_factura = @v_id_factura;
+cometer;
+seleccione * de bd_sample.tbl_facturas donde id_subscriptor = 29
+y date_format(fecha_emision,'%Y%m' ) = '202202';
+
+seleccione * de tbl_facturas donde id_factura = 29;
+seleccione * de tbl_items_factura donde id_factura = 29;  
+
+#¿Cuál es el monto total de las facturas creadas para el subscriptor con código: 202212345?
+#R/=
+#id_factura, fecha_emision, id_subscriptor, numero_items, isv_total, subtotal, totalpagar
+#41 2022-02-08 00:00:00 24 3 2.97 16.50 19.47
+#42 2022-02-08 00:00:00 24 1 0.99 5.50 6.49
+
+/*tube un porblema que no pude solucionar,resulta que las primeras facturas me salieron bien que eran intentos de prueba
+pero cuando genere otros para seguir probando no me funcionaron,este resultado son de las dos primeras con las que hice
+pruebas*/
